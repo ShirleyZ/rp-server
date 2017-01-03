@@ -7,6 +7,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"net/http"
+	"strconv"
+	// "net/url"
 )
 
 type UserData struct {
@@ -70,9 +72,7 @@ func FindHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Name is: %s", findName)
 
 	if findName != "" {
-		// Result := []UserData{}
 		Result := UserData{}
-		// Result := bson.M{}
 		err := c.Find(bson.M{"username": findName}).One(&Result)
 		if err != nil {
 			log.Println("Find error")
@@ -88,11 +88,67 @@ func FindHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Fprintf(w, "%s", jsonResult)
 		}
-		defer s.Close()
-
 	}
+	defer s.Close()
 }
 
 func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("= Accessing add credits handler")
+
+	collection, session := setupConn("users")
+	log.Printf("Url is: %v \n", r.URL)
+	err := r.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Body is: %+v \n", r.Form)
+
+	// urlParams := r.URL.Query()
+	urlParams := r.Form
+	receiverName := urlParams.Get("username")
+	log.Printf("\nName\n%v\n", receiverName)
+	/// THIS LINE BRO!!!!! GOTTA CHECK AMOUNT PARSING IS RIGHT
+	log.Printf("\n%v\n", urlParams.Get("amount"))
+
+	var amount int
+	if urlParams.Get("amount") != "" {
+		log.Println("Converting amount to int")
+		amount, err = strconv.Atoi(urlParams.Get("amount"))
+		if err != nil {
+			log.Println("Unable to read amount as int")
+			log.Fatal(err)
+		}
+	} else {
+		log.Println("Unable to read amount as int")
+		log.Fatal(err)
+	}
+
+	// If missing arguments
+	if receiverName == "" {
+		fmt.Fprint(w, "Error: Missing argument username")
+	} else {
+		// Get the user's current amount of money
+		result := UserData{}
+		err := collection.Find(bson.M{"username": receiverName}).One(&result)
+		if err != nil {
+			log.Println("Find error")
+			fmt.Fprint(w, "No user with that name found")
+		}
+
+		// Send off update query to update
+		log.Printf("\nBefore Addition\n%+v\n", &result)
+		result.Credits += amount
+		log.Printf("\nAfter Addition\n%+v\n", &result)
+
+		err = collection.Update(bson.M{"username": receiverName}, &result)
+		if err != nil {
+			log.Println("can't do it boss")
+			log.Fatal(err)
+		}
+		// log.Println("Did the thing")
+		fmt.Fprint(w, "Success")
+	}
+
+	defer session.Close()
 
 }
