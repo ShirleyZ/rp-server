@@ -53,6 +53,7 @@ func main() {
 	http.HandleFunc("/api/find/", be.FindHandler)
 	http.HandleFunc("/api/add/user/", be.AddUserHandler)
 	http.HandleFunc("/api/credits/add/", be.CreditsAddToUserHandler)
+	http.HandleFunc("/api/profile/edit/", be.ProfileEditHandler)
 
 	log.Println("== Listen and Serve on port")
 	http.ListenAndServe(":8080", nil)

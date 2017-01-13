@@ -12,6 +12,7 @@ import (
 )
 
 type UserData struct {
+	Id       string
 	Username string
 	Credits  int
 	Profile  string
@@ -26,10 +27,12 @@ func AddUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	urlParams := r.URL.Query()
 	findName := urlParams.Get("name")
+	findId := urlParams.Get("id")
 	log.Printf("New user will be: %s", findName)
+	log.Printf("Id is: %s\n", findId)
 
-	if findName != "" {
-		newUser := &UserData{findName, 50, "A fresh-faced young adventurer", "Newbie"}
+	if findId != "" {
+		newUser := &UserData{findId, findName, 50, "A fresh-faced young adventurer", "Newbie"}
 		// err := c.Insert(&UserData{findName, 50, "", ""})
 		err := c.Insert(newUser)
 		if err != nil {
@@ -42,7 +45,7 @@ func AddUserHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", jsonResult)
 
 	} else {
-		log.Print("User not created. No name given.")
+		log.Print("User not created. No id given.")
 	}
 	defer s.Close()
 }
@@ -69,13 +72,16 @@ func FindHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("U is: %v \n", r.URL)
 	urlParams := r.URL.Query()
 	findName := urlParams.Get("name")
-	log.Printf("Name is: %s", findName)
+	findId := urlParams.Get("id")
+	log.Printf("Name is: %s\n", findName)
+	log.Printf("Id is: %s\n", findId)
 
 	if findName != "" {
 		Result := UserData{}
-		err := c.Find(bson.M{"username": findName}).One(&Result)
+		err := c.Find(bson.M{"id": findId}).One(&Result)
+
 		if err != nil {
-			log.Println("Find error")
+			log.Println("No user found")
 			fmt.Fprint(w, "No user with that name found")
 
 		} else {
@@ -106,8 +112,9 @@ func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
 	// urlParams := r.URL.Query()
 	urlParams := r.Form
 	receiverName := urlParams.Get("username")
+	receiverId := urlParams.Get("id")
 	log.Printf("\nName\n%v\n", receiverName)
-	/// THIS LINE BRO!!!!! GOTTA CHECK AMOUNT PARSING IS RIGHT
+	log.Printf("\nId\n%v\n", receiverId)
 	log.Printf("\n%v\n", urlParams.Get("amount"))
 
 	var amount int
@@ -124,31 +131,68 @@ func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If missing arguments
-	if receiverName == "" {
+	if receiverId == "" {
 		fmt.Fprint(w, "Error: Missing argument username")
 	} else {
 		// Get the user's current amount of money
 		result := UserData{}
-		err := collection.Find(bson.M{"username": receiverName}).One(&result)
+		err := collection.Find(bson.M{"id": receiverId}).One(&result)
+
 		if err != nil {
 			log.Println("Find error")
 			fmt.Fprint(w, "No user with that name found")
-		}
 
-		// Send off update query to update
-		log.Printf("\nBefore Addition\n%+v\n", &result)
-		result.Credits += amount
-		log.Printf("\nAfter Addition\n%+v\n", &result)
+		} else {
+			// Send off update query to update
+			log.Printf("\nBefore Addition\n%+v\n", &result)
+			result.Credits += amount
+			log.Printf("\nAfter Addition\n%+v\n", &result)
 
-		err = collection.Update(bson.M{"username": receiverName}, &result)
-		if err != nil {
-			log.Println("can't do it boss")
-			log.Fatal(err)
+			err = collection.Update(bson.M{"id": receiverId}, &result)
+			if err != nil {
+				log.Println("can't do it boss")
+				log.Fatal(err)
+			}
+			fmt.Fprint(w, "Success")
 		}
-		// log.Println("Did the thing")
-		fmt.Fprint(w, "Success")
 	}
 
 	defer session.Close()
 
+}
+
+func ProfileEditHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("= Accessing profile edit handler")
+
+	collection, session := setupConn("users")
+	log.Printf("Url is: %v \n", r.URL)
+	err := r.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Body is: %+v \n", r.Form)
+
+	// Get the user's current amount of money
+	receiverId := r.Form.Get("id")
+	result := UserData{}
+	err = collection.Find(bson.M{"id": receiverId}).One(&result)
+
+	if err != nil {
+		log.Println("Find error")
+		fmt.Fprint(w, "No user with that id found")
+
+	} else {
+		// Send off update query to update
+		log.Printf("\nBefore Change\n%+v\n", &result)
+		result.Profile = r.Form.Get("profile")
+		log.Printf("\nAfter Change\n%+v\n", &result)
+
+		err = collection.Update(bson.M{"id": receiverId}, &result)
+		if err != nil {
+			log.Println("can't do it boss")
+			log.Fatal(err)
+		}
+		fmt.Fprint(w, "Success")
+	}
+	defer session.Close()
 }
