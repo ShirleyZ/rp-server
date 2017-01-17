@@ -3,6 +3,7 @@ package be
 import (
 	"encoding/json"
 	"fmt"
+	// "github.com/gorilla/Schema"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -17,6 +18,7 @@ type UserData struct {
 	Credits  int
 	Profile  string
 	Title    string
+	Cookies  int
 }
 
 func AddUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -28,16 +30,15 @@ func AddUserHandler(w http.ResponseWriter, r *http.Request) {
 	urlParams := r.URL.Query()
 	findName := urlParams.Get("name")
 	findId := urlParams.Get("id")
-	log.Printf("New user will be: %s", findName)
-	log.Printf("Id is: %s\n", findId)
+	// log.Printf("New user will be: %s", findName)
 
 	if findId != "" {
-		newUser := &UserData{findId, findName, 50, "A fresh-faced young adventurer", "Newbie"}
-		// err := c.Insert(&UserData{findName, 50, "", ""})
+		newUser := &UserData{findId, findName, 50, "A fresh-faced young adventurer", "Newbie", 0}
 		err := c.Insert(newUser)
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("%+v", newUser)
 		jsonResult, err := json.Marshal(newUser)
 		if err != nil {
 			log.Fatal(err)
@@ -69,14 +70,10 @@ func FindHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Accessing find handler")
 	c, s := setupConn("users")
 
-	log.Printf("U is: %v \n", r.URL)
 	urlParams := r.URL.Query()
-	findName := urlParams.Get("name")
 	findId := urlParams.Get("id")
-	log.Printf("Name is: %s\n", findName)
-	log.Printf("Id is: %s\n", findId)
 
-	if findName != "" {
+	if findId != "" {
 		Result := UserData{}
 		err := c.Find(bson.M{"id": findId}).One(&Result)
 
@@ -85,8 +82,7 @@ func FindHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "No user with that name found")
 
 		} else {
-			log.Println("Result")
-			log.Printf("\n%+v\n", Result)
+			log.Printf("%+v", Result)
 
 			jsonResult, err := json.Marshal(Result)
 			if err != nil {
@@ -102,24 +98,20 @@ func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Accessing add credits handler")
 
 	collection, session := setupConn("users")
-	log.Printf("Url is: %v \n", r.URL)
 	err := r.ParseForm()
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Body is: %+v \n", r.Form)
 
 	// urlParams := r.URL.Query()
 	urlParams := r.Form
 	receiverName := urlParams.Get("username")
 	receiverId := urlParams.Get("id")
-	log.Printf("\nName\n%v\n", receiverName)
-	log.Printf("\nId\n%v\n", receiverId)
-	log.Printf("\n%v\n", urlParams.Get("amount"))
+	log.Printf("Giving %v %v credits", receiverName, urlParams.Get("amount"))
 
 	var amount int
 	if urlParams.Get("amount") != "" {
-		log.Println("Converting amount to int")
+		// log.Println("Converting amount to int")
 		amount, err = strconv.Atoi(urlParams.Get("amount"))
 		if err != nil {
 			log.Println("Unable to read amount as int")
@@ -144,9 +136,7 @@ func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
 
 		} else {
 			// Send off update query to update
-			log.Printf("\nBefore Addition\n%+v\n", &result)
 			result.Credits += amount
-			log.Printf("\nAfter Addition\n%+v\n", &result)
 
 			err = collection.Update(bson.M{"id": receiverId}, &result)
 			if err != nil {
@@ -186,6 +176,51 @@ func ProfileEditHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("\nBefore Change\n%+v\n", &result)
 		result.Profile = r.Form.Get("profile")
 		log.Printf("\nAfter Change\n%+v\n", &result)
+
+		err = collection.Update(bson.M{"id": receiverId}, &result)
+		if err != nil {
+			log.Println("can't do it boss")
+			log.Fatal(err)
+		}
+		fmt.Fprint(w, "Success")
+	}
+	defer session.Close()
+}
+
+func ProfileUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("= Updating user information")
+	collection, session := setupConn("users")
+	err := r.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Body is: %+v \n", r.Form)
+
+	// Check that the user exists
+	receiverId := r.Form.Get("Id")
+	log.Printf("User id: %s", receiverId)
+	result := UserData{}
+	err = collection.Find(bson.M{"id": receiverId}).One(&result)
+
+	if err != nil {
+		log.Println("Find error")
+		fmt.Fprint(w, "No user with that id found")
+
+	} else {
+		// GUESS WHAT I HATE MYSELF BUT HATE THIS MORE LET'S HARDCODE THIS SHIT
+		// decoder := schema.NewDecoder()
+		// person := UserData{}
+		// // r.PostForm is a map of our POST form values
+		// err := decoder.Decode(person, r.PostForm)
+		// log.Printf("Body: %+v", person)
+
+		result.Profile = r.Form.Get("Profile")
+		result.Title = r.Form.Get("Title")
+		result.Cookies, err = strconv.Atoi(r.Form.Get("Cookies"))
+		result.Credits, err = strconv.Atoi(r.Form.Get("Credits"))
+
+		log.Printf("Body: %+v", result)
+		// Send off update query to update
 
 		err = collection.Update(bson.M{"id": receiverId}, &result)
 		if err != nil {

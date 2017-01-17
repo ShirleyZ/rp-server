@@ -54,6 +54,7 @@ func main() {
 	http.HandleFunc("/api/add/user/", be.AddUserHandler)
 	http.HandleFunc("/api/credits/add/", be.CreditsAddToUserHandler)
 	http.HandleFunc("/api/profile/edit/", be.ProfileEditHandler)
+	http.HandleFunc("/api/profile/update/", be.ProfileUpdateHandler)
 
 	log.Println("== Listen and Serve on port")
 	http.ListenAndServe(":8080", nil)
