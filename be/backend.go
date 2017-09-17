@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	// "github.com/gorilla/Schema"
+	// "database/sql"
+	// "github.com/go-sql-driver/mysql"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
