@@ -60,6 +60,7 @@ func main() {
 	// ==== RP API Calls
 	log.Println("== Handling rpcmd api")
 	http.HandleFunc("/api/rpcmd/item/give/", rpcmd.GiveHandler)
+	http.HandleFunc("/api/rpcmd/item/check/", rpcmd.CheckHandler)
 
 	log.Println("== Listen and Serve on port")
 	http.ListenAndServe(":8080", nil)

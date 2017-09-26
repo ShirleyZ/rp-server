@@ -2,24 +2,73 @@ package rpcmd
 
 import (
 	// "encoding/json"
-	// "fmt"
 	"../be"
-	"gopkg.in/mgo.v2"
+	// "gopkg.in/mgo.v2"
+	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
-	// "strconv"
 	// "net/url"
 )
 
+const itemTableName = "rpcmditems"
+
+type UserItemData struct {
+	UserId string        `bson:"userid" json:"userid"`
+	Items  []interface{} `bson:"items" json:"items"`
+}
+
+type GetThis struct {
+	UserId string `bson:"userid" json:"userid"`
+}
+
+func CheckHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("=== rpcmd: Accessing CheckHandler")
+	c, s := be.SetupConn(itemTableName)
+	defer s.Close()
+
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("CheckHandler: failed to pass post form")
+		log.Printf("Error: %+v", err.Error())
+		fmt.Fprint(w, "Error check 1")
+		return
+	}
+
+	userId := r.Form.Get("userid")
+	userItemRecord := UserItemData{}
+	if userId == "" {
+		log.Println("Error: No userid given or parsed")
+		fmt.Fprint(w, "Error check 2")
+		return
+	}
+
+	Test := GetThis{}
+	err = c.Find(bson.M{"userid": userId}).One(&userItemRecord)
+	err = c.Find(bson.M{"userid": userId}).One(&Test)
+	if err != nil && err.Error() != "not found" {
+		log.Println("Error: Something went wrong trying to find user in collection")
+		log.Printf("%+v", err.Error())
+		fmt.Fprint(w, "Error check 3")
+		return
+	}
+
+	log.Printf("Got this: %+v", userItemRecord)
+	log.Printf("Got this: %+v", Test)
+	fmt.Fprint(w, userItemRecord)
+}
+
 func GiveHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("=== Accessing GiveHandler")
+	log.Println("=== rpcmd: Accessing GiveHandler")
 
 	err := r.ParseForm()
 	if err != nil {
 		log.Println("GiveHandler: failed to pass post form")
-		log.Fatal(err)
+		log.Printf("Error: %+v", err.Error())
+		fmt.Fprint(w, "Error give 1")
+		return
 	}
 
 	userId := r.Form.Get("userid")
@@ -34,6 +83,7 @@ func GiveHandler(w http.ResponseWriter, r *http.Request) {
 	var itemMap = make(map[string]string)
 	prevKey := ""
 	itemValue := ""
+	trimmedKey := ""
 	for index, element := range itemParams {
 		// check if there's a :
 		splitParam := strings.Split(element, ":")
@@ -52,13 +102,44 @@ func GiveHandler(w http.ResponseWriter, r *http.Request) {
 					itemValue = itemValue + splitParam[i]
 				}
 			}
-			itemMap[splitParam[0]] = strings.Trim(itemValue, " ")
-			prevKey = splitParam[0]
+			trimmedKey = strings.Trim(splitParam[0], " ")
+			itemMap[trimmedKey] = strings.Trim(itemValue, " ")
+			prevKey = trimmedKey
 		}
 	}
 	log.Printf("itemMap:\n%+v\n", itemMap)
 
 	// Start tossing stuff into the db
-	c, s := setupConn("users")
+	c, s := be.SetupConn(itemTableName)
 	defer s.Close()
+
+	userItemRecord := UserItemData{}
+	if userId != "" {
+		err := c.Find(bson.M{"userid": userId}).One(&userItemRecord)
+		if err != nil && err.Error() != "not found" {
+			log.Println("There was an error")
+			log.Printf("error: %+v", err.Error())
+			fmt.Fprint(w, "Error give 2")
+			return
+		} else if err != nil && err.Error() == "not found" {
+			log.Println("User not found. Creating new record")
+			itemArray := make([]interface{}, 1)
+			itemMap["itemid"] = "ID1"
+			itemArray[0] = itemMap
+			newRecord := &UserItemData{userId, itemArray}
+			c.Insert(&newRecord)
+
+		} else if err == nil {
+			log.Println("Found record. Gotta write this")
+			// TODO: Figure out the logic here
+			log.Printf("Record: %+v", userItemRecord)
+			itemArray := userItemRecord.Items
+			inventoryLength := len(itemArray)
+			itemMap["itemid"] = "ID" + strconv.Itoa(inventoryLength+1)
+			itemArray = append(itemArray, itemMap)
+			userItemRecord.Items = itemArray
+			c.Update(bson.M{"userid": userId}, &userItemRecord)
+		}
+	}
+
 }
