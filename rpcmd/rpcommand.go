@@ -1,9 +1,9 @@
 package rpcmd
 
 import (
-	// "encoding/json"
 	"../be"
 	// "gopkg.in/mgo.v2"
+	"encoding/json"
 	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -18,10 +18,6 @@ const itemTableName = "rpcmditems"
 type UserItemData struct {
 	UserId string        `bson:"userid" json:"userid"`
 	Items  []interface{} `bson:"items" json:"items"`
-}
-
-type GetThis struct {
-	UserId string `bson:"userid" json:"userid"`
 }
 
 func CheckHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,19 +41,26 @@ func CheckHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Test := GetThis{}
+	log.Printf("Looking for user: %s", userId)
 	err = c.Find(bson.M{"userid": userId}).One(&userItemRecord)
-	err = c.Find(bson.M{"userid": userId}).One(&Test)
 	if err != nil && err.Error() != "not found" {
 		log.Println("Error: Something went wrong trying to find user in collection")
 		log.Printf("%+v", err.Error())
 		fmt.Fprint(w, "Error check 3")
 		return
+	} else if err != nil && err.Error() == "not found" {
+		log.Println("Error: Can't find that user")
+		log.Printf("%+v", err.Error())
+		fmt.Fprint(w, "Error check 4")
+		return
 	}
 
-	log.Printf("Got this: %+v", userItemRecord)
-	log.Printf("Got this: %+v", Test)
-	fmt.Fprint(w, userItemRecord)
+	jsonResult, err := json.Marshal(userItemRecord)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Sending this: %s", jsonResult)
+	fmt.Fprintf(w, "%s", jsonResult)
 }
 
 func GiveHandler(w http.ResponseWriter, r *http.Request) {
