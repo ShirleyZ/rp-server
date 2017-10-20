@@ -111,9 +111,10 @@ func DiscardHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check if id exceeds length
 	itemNumber, _ := strconv.Atoi(itemIdString[2:])
-
-	if len(userItemRecord.Items) < itemNumber {
-		log.Println("Error: ItemId is longer than inv length")
+	log.Printf("converting: %v", itemIdString[2:])
+	log.Printf("itemNumber: %v", itemNumber)
+	if len(userItemRecord.Items) < itemNumber || itemNumber <= 0 {
+		log.Println("Error: ItemId is longer than inv length or below 0")
 		fmt.Fprint(w, "Itemid does not exist")
 		return
 	}
@@ -216,8 +217,7 @@ func GiveHandler(w http.ResponseWriter, r *http.Request) {
 			c.Insert(&newRecord)
 
 		} else if err == nil {
-			log.Println("Found record. Gotta write this")
-			// TODO: Figure out the logic here
+			log.Println("Found record.")
 			log.Printf("Record: %+v", userItemRecord)
 			itemArray := userItemRecord.Items
 			inventoryLength := len(itemArray)
