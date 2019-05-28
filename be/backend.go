@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	// "github.com/gorilla/Schema"
+	// "database/sql"
+	// "github.com/go-sql-driver/mysql"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
@@ -23,7 +25,7 @@ type UserData struct {
 
 func AddUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Accessing add handler")
-	c, s := setupConn("users")
+	c, s := SetupConn("users")
 
 	log.Printf("U is: %v \n", r.URL)
 
@@ -51,7 +53,7 @@ func AddUserHandler(w http.ResponseWriter, r *http.Request) {
 	defer s.Close()
 }
 
-func setupConn(table string) (c *mgo.Collection, s *mgo.Session) {
+func SetupConn(table string) (c *mgo.Collection, s *mgo.Session) {
 	// Creating conenction each time because, i'm a god damn noob that doesn't know better
 	session, err := mgo.Dial("localhost:27017")
 	if err != nil {
@@ -68,7 +70,7 @@ func setupConn(table string) (c *mgo.Collection, s *mgo.Session) {
 // Just want to access db so i can find/insert stuff, but it's not being passed through
 func FindHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Accessing find handler")
-	c, s := setupConn("users")
+	c, s := SetupConn("users")
 
 	urlParams := r.URL.Query()
 	findId := urlParams.Get("id")
@@ -97,7 +99,7 @@ func FindHandler(w http.ResponseWriter, r *http.Request) {
 func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Accessing add credits handler")
 
-	collection, session := setupConn("users")
+	collection, session := SetupConn("users")
 	err := r.ParseForm()
 	if err != nil {
 		log.Fatal(err)
@@ -154,7 +156,7 @@ func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
 func ProfileEditHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Accessing profile edit handler")
 
-	collection, session := setupConn("users")
+	collection, session := SetupConn("users")
 	log.Printf("Url is: %v \n", r.URL)
 	err := r.ParseForm()
 	if err != nil {
@@ -189,7 +191,7 @@ func ProfileEditHandler(w http.ResponseWriter, r *http.Request) {
 
 func ProfileUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Updating user information")
-	collection, session := setupConn("users")
+	collection, session := SetupConn("users")
 	err := r.ParseForm()
 	if err != nil {
 		log.Fatal(err)

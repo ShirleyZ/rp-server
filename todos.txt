@@ -1,0 +1,3 @@
+todos
+[ ] how do i update go packages
+[ ] how do i send info back
