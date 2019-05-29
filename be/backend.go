@@ -17,6 +17,7 @@ import (
 type UserData struct {
 	Id       string
 	Username string
+	Guild    string
 	Credits  int
 	Profile  string
 	Title    string
@@ -32,10 +33,11 @@ func AddUserHandler(w http.ResponseWriter, r *http.Request) {
 	urlParams := r.URL.Query()
 	findName := urlParams.Get("name")
 	findId := urlParams.Get("id")
+	findGuild := urlParams.Get("guild")
 	// log.Printf("New user will be: %s", findName)
 
 	if findId != "" {
-		newUser := &UserData{findId, findName, 50, "A fresh-faced young adventurer", "Newbie", 0}
+		newUser := &UserData{findId, findName, findGuild, 50, "A fresh-faced young adventurer", "Newbie", 0}
 		err := c.Insert(newUser)
 		if err != nil {
 			log.Fatal(err)
@@ -70,14 +72,16 @@ func SetupConn(table string) (c *mgo.Collection, s *mgo.Session) {
 // Just want to access db so i can find/insert stuff, but it's not being passed through
 func FindHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("= Accessing find handler")
+	log.Printf("U is: %v \n", r.URL)
 	c, s := SetupConn("users")
 
 	urlParams := r.URL.Query()
 	findId := urlParams.Get("id")
+	findGuild := urlParams.Get("guildId")
 
-	if findId != "" {
+	if findId != "" && findGuild != "" {
 		Result := UserData{}
-		err := c.Find(bson.M{"id": findId}).One(&Result)
+		err := c.Find(bson.M{"id": findId, "guild": findGuild}).One(&Result)
 
 		if err != nil {
 			log.Println("No user found")
@@ -92,6 +96,9 @@ func FindHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Fprintf(w, "%s", jsonResult)
 		}
+	} else {
+		log.Println("User Id or Guild Id not given/found")
+		log.Printf("Id: %s | Guild: %s", findId, findGuild)
 	}
 	defer s.Close()
 }
