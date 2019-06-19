@@ -56,7 +56,7 @@ func AddUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetupConn(table string) (c *mgo.Collection, s *mgo.Session) {
-	// Creating conenction each time because, i'm a god damn noob that doesn't know better
+	// Creating connection each time because, i don't know better, YET
 	session, err := mgo.Dial("localhost:27017")
 	if err != nil {
 		panic(err)
@@ -65,7 +65,6 @@ func SetupConn(table string) (c *mgo.Collection, s *mgo.Session) {
 	// defer session.Close() // if i do it here, problems
 	c = session.DB("rphelper").C(table)
 
-	// Let this misery end pls
 	return c, session
 }
 
@@ -112,7 +111,6 @@ func CreditsAddToUserHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	// urlParams := r.URL.Query()
 	urlParams := r.Form
 	receiverName := urlParams.Get("username")
 	receiverId := urlParams.Get("id")
@@ -216,7 +214,7 @@ func ProfileUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "No user with that id found")
 
 	} else {
-		// GUESS WHAT I HATE MYSELF BUT HATE THIS MORE LET'S HARDCODE THIS SHIT
+		// Hardcoding for now because I can only deal with so many new things at once
 		// decoder := schema.NewDecoder()
 		// person := UserData{}
 		// // r.PostForm is a map of our POST form values

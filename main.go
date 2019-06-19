@@ -49,6 +49,12 @@ func main() {
 	log.Println("== Handling front end")
 	http.HandleFunc("/", fe.HomeHandler)
 
+	// ==== Bot Settings API calls
+	log.Println("== Handling Bot API")
+	http.HandleFunc("/api/botadmin/getAllGuildConfig", be.GetAllGuildConfig)
+	http.HandleFunc("/api/botadmin/saveGuildConfig", be.SaveGuildConfig)
+	http.HandleFunc("/api/botadmin/initBotConfig", be.InitBotConfig)
+
 	// ==== API calls
 	log.Println("== Handling API")
 	http.HandleFunc("/api/find/", be.FindHandler)
